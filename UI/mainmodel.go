@@ -2,8 +2,9 @@ package UI
 
 import (
 	"github.com/charmbracelet/bubbles/list"
-	"github.com/charmbracelet/bubbles/textinput"
+	"github.com/charmbracelet/bubbles/progress"
 	tea "github.com/charmbracelet/bubbletea"
+	components "github.com/pclubiitk/dbcli/Components"
 	"github.com/pclubiitk/dbcli/DB"
 )
 
@@ -27,7 +28,7 @@ type Model struct {
 	DestCred    map[string]string
 	Source	    DB.DBInterface  //these are the most imp fields
 	Dest        DB.DBInterface  //they are direct connections to databases
-	CredInput   textinput.Model
+	CredInput   components.Input
 	CredKeys    []string
 	CredIndex   int
 	IsSource    bool
@@ -49,19 +50,34 @@ type Model struct {
 	DestColumnList  list.Model
 
 	// ---- MAPPING ----
-	ColumnMapping map[string]string
-	CurrentMapIdx int
-	MapInput      textinput.Model
+	ColumnMapping 		map[string]string
+	CurrentMapIdx       int
+	ColumnBeingMapped   string
 
 	// ---- DUMP OPTION ----
-	WantDump    bool
+	WantDump    *bool
 	DumpPath    string
-	DumpPathInp textinput.Model
+	DumpPathInp components.Input
+
+	// ---- Migration State ----
+	MigrationInProgress bool
+	MigrationDone       bool
+	MigrationProgress   float64 // 0.0 → 1.0
+	StatusMsg           string
+	Progress            progress.Model
+	ProgressChan chan int
+	DoneChan     chan error
+
+
 
 	// ---- MISC ----
 	ErrMsg string
+
+	// ---- WINDOW PROPERTIES ----
+	Width  int
+	Height int
 }
 
 func (m Model) Init() tea.Cmd {
-	return nil
+	return m.CredInput.Blink
 }

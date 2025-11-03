@@ -10,7 +10,7 @@ import (
 
 var MySQLDB *gorm.DB
 
-func ConnectMySQL(host, port, password, dbName, user string) {
+func ConnectMySQL(host, port, dbName, user, password string) {
 	// Data Source Name (DSN) format for MySQL
 	// Example: user:password@tcp(localhost:3306)/dbname?charset=utf8mb4&parseTime=True&loc=Local
 	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=True&loc=Local",

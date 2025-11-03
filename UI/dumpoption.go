@@ -4,20 +4,74 @@ import (
 	"fmt"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 )
 
-func UpdateDumpOption(m Model, msg tea.Msg) Model {
+func UpdateDumpOption(m Model, msg tea.Msg) (Model, tea.Cmd) {
+	var cmd tea.Cmd
+
+	// Always update the text input for dump path
+	m.DumpPathInp, cmd = m.DumpPathInp.Update(msg)
+
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
- 		if msg.String() == "enter" {
-			m.WantDump = true
-			m.DumpPath = "./dump.sql" // default placeholder
+		switch msg.String() {
+
+		case "enter":
+			// Step 1: Ask whether they want a dump
+			if m.WantDump == nil {
+				val := true
+				m.WantDump = &val
+				m.DumpPathInp.Focus() // move to input field
+				return m, cmd
+			}
+
+			// Step 2: If they want dump, read the input path
+			if *m.WantDump {
+				if m.DumpPathInp.Value() == "" {
+					m.DumpPath = "./dump.sql"
+				} else {
+					m.DumpPath = m.DumpPathInp.Value()
+				}
+			}
+
+			// Step 3: Move to next step
 			m.Step++
+			return m, cmd
+
+		case "n":
+			if m.WantDump == nil {
+				val := false
+				m.WantDump = &val
+				m.Step++
+				return m, nil
+			}
 		}
 	}
-	return m
+
+	return m, cmd
 }
 
 func ViewDumpOption(m Model) string {
-	return fmt.Sprintf("Dump option:\n%s\nPress Enter to continue.", "./dump.sql")
+	title := lipgloss.NewStyle().Bold(true).Underline(true).Render("Dump Option")
+
+	if m.WantDump == nil {
+		return fmt.Sprintf(
+			"%s\n\nDo you want to dump the data to a file? (press ENTER for yes, 'n' for no)",
+			title,
+		)
+	}
+
+	if *m.WantDump {
+		return fmt.Sprintf(
+			"%s\n\nEnter dump path (default: ./dump.sql):\n\n%s\n\nPress ENTER to confirm.",
+			title,
+			m.DumpPathInp.View(),
+		)
+	}
+
+	return fmt.Sprintf(
+		"%s\n\nSkipping dump creation.\nPress ENTER to continue.",
+		title,
+	)
 }
