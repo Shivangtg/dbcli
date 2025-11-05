@@ -73,6 +73,11 @@ func UpdateSelection(m Model, msg tea.Msg) (Model, tea.Cmd) {
 					} else {
 						m.SelectedSourceCols = append(m.SelectedSourceCols, name)
 					}
+
+					newDelegate := components.NewCustomDelegate()
+					newDelegate.SetSelected(m.SelectedSourceCols)
+					m.SourceColumnList.SetDelegate(newDelegate)	
+
 				}
 			case "enter":
 				m.Step = StepSelectDestTable
@@ -127,6 +132,12 @@ func UpdateSelection(m Model, msg tea.Msg) (Model, tea.Cmd) {
 					} else {
 						m.SelectedDestCols = append(m.SelectedDestCols, name)
 					}
+					
+					
+					newDelegate := components.NewCustomDelegate()
+					newDelegate.SetSelected(m.SelectedDestCols)
+					m.DestColumnList.SetDelegate(newDelegate)	
+
 				}
 			case "enter":
 				m.Step = StepMapping
