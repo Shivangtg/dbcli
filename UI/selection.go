@@ -28,12 +28,22 @@ func UpdateSelection(m Model, msg tea.Msg) (Model, tea.Cmd) {
 				if item, ok := m.SourceTableList.SelectedItem().(components.ListItem); ok {
 					m.SelectedSourceTbl = string(item)
 					var query string
-					if(m.SourceCred["dbVendor"]=="oracle"){
+					var coloumns []string
+					var err error
+					if m.SourceCred["dbVendor"] == "oracle" {
 						query = "SELECT column_name FROM all_tab_columns WHERE owner = :1 AND table_name = :2 ORDER BY column_id"
-					}else if(m.SourceCred["dbVendor"]=="mysql"){
+						coloumns, err = DB.QueryStrings(m.Source, query,
+							strings.ToUpper(m.SourceCred["user"]),
+							strings.ToUpper(m.SelectedSourceTbl))
+					} else if m.SourceCred["dbVendor"] == "mysql" {
 						query = "SELECT column_name FROM information_schema.columns WHERE table_schema = ? AND table_name = ? ORDER BY ordinal_position"
+						coloumns, err = DB.QueryStrings(m.Source, query,
+							strings.ToLower(m.SourceCred["user"]),
+							strings.ToLower(m.SelectedSourceTbl))
 					}
-					coloumns , err :=DB.QueryStrings(m.Source,query,m.SourceCred["user"],m.SelectedSourceTbl)
+
+
+					
 					if err != nil {
 						m.ErrMsg = fmt.Sprintf("Failed to list dest tables: %v", err)
 						m.SourceColumns = []string{}
@@ -78,12 +88,20 @@ func UpdateSelection(m Model, msg tea.Msg) (Model, tea.Cmd) {
 				if item, ok := m.DestTableList.SelectedItem().(components.ListItem); ok {
 					m.SelectedDestTbl = string(item)
 					var query string
-					if(m.DestCred["dbVendor"]=="oracle"){
+					var coloumns []string
+					var err error
+					if m.SourceCred["dbVendor"] == "oracle" {
 						query = "SELECT column_name FROM all_tab_columns WHERE owner = :1 AND table_name = :2 ORDER BY column_id"
-					}else if(m.DestCred["dbVendor"]=="mysql"){
+						coloumns, err = DB.QueryStrings(m.Source, query,
+							strings.ToUpper(m.SourceCred["user"]),
+							strings.ToUpper(m.SelectedSourceTbl))
+					} else if m.SourceCred["dbVendor"] == "mysql" {
 						query = "SELECT column_name FROM information_schema.columns WHERE table_schema = ? AND table_name = ? ORDER BY ordinal_position"
+						coloumns, err = DB.QueryStrings(m.Source, query,
+							strings.ToLower(m.SourceCred["user"]),
+							strings.ToLower(m.SelectedSourceTbl))
 					}
-					coloumns , err :=DB.QueryStrings(m.Dest,query,m.DestCred["user"],m.SelectedDestTbl)
+
 					if err != nil {
 						m.ErrMsg = fmt.Sprintf("Failed to list dest tables: %v", err)
 						m.DestColumns = []string{}
