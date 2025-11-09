@@ -38,7 +38,7 @@ func UpdateSelection(m Model, msg tea.Msg) (Model, tea.Cmd) {
 					} else if m.SourceCred["dbVendor"] == "mysql" {
 						query = "SELECT column_name FROM information_schema.columns WHERE table_schema = ? AND table_name = ? ORDER BY ordinal_position"
 						coloumns, err = DB.QueryStrings(m.Source, query,
-							strings.ToLower(m.SourceCred["user"]),
+							strings.ToLower(m.SourceCred["dbname"]),
 							strings.ToLower(m.SelectedSourceTbl))
 					}
 
@@ -95,17 +95,20 @@ func UpdateSelection(m Model, msg tea.Msg) (Model, tea.Cmd) {
 					var query string
 					var coloumns []string
 					var err error
-					if m.SourceCred["dbVendor"] == "oracle" {
+					if m.DestCred["dbVendor"] == "oracle" {
 						query = "SELECT column_name FROM all_tab_columns WHERE owner = :1 AND table_name = :2 ORDER BY column_id"
-						coloumns, err = DB.QueryStrings(m.Source, query,
-							strings.ToUpper(m.SourceCred["user"]),
-							strings.ToUpper(m.SelectedSourceTbl))
-					} else if m.SourceCred["dbVendor"] == "mysql" {
+						coloumns, err = DB.QueryStrings(m.Dest, query,
+							strings.ToUpper(m.DestCred["user"]),
+							strings.ToUpper(m.SelectedDestTbl))
+					} else if m.DestCred["dbVendor"] == "mysql" {
 						query = "SELECT column_name FROM information_schema.columns WHERE table_schema = ? AND table_name = ? ORDER BY ordinal_position"
-						coloumns, err = DB.QueryStrings(m.Source, query,
-							strings.ToLower(m.SourceCred["user"]),
-							strings.ToLower(m.SelectedSourceTbl))
+						coloumns, err = DB.QueryStrings(m.Dest, query,
+							strings.ToLower(m.DestCred["dbname"]),
+							strings.ToLower(m.SelectedDestTbl))
+
+						fmt.Println("Dest Columns:", coloumns)
 					}
+
 
 					if err != nil {
 						m.ErrMsg = fmt.Sprintf("Failed to list dest tables: %v", err)
@@ -113,6 +116,7 @@ func UpdateSelection(m Model, msg tea.Msg) (Model, tea.Cmd) {
 					} else {
 						m.DestColumns = coloumns
 						m.DestColumnList = components.CreateList(m.DestColumns, "📦 Destination Columns",m.Width,m.Height)
+						m.MappingDestColumnList = components.CreateList(m.DestColumns, "📦 Destination Columns", m.Width, m.Height)
 					}
 					m.Step = StepSelectDestColumns
 				}

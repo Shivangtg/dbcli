@@ -12,6 +12,8 @@ func (m Model) View() string {
 		return ViewMapping(m)
 	case StepDumpOption:
 		return ViewDumpOption(m)
+	case StepMigrationConfirm:
+		return ViewMigrationCompletion(m)
 	default:
 		return fmt.Sprintf("Migration complete! Column mappings: %+v\nPress q to quit.", m.ColumnMapping)
 	}

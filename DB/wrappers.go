@@ -1,8 +1,8 @@
 package DB
 
 import (
-    "database/sql"
-    "gorm.io/gorm"
+	"database/sql"
+	"gorm.io/gorm"
 )
 
 // DBInterface is a common interface for any database type

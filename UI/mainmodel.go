@@ -53,6 +53,7 @@ type Model struct {
 	ColumnMapping 		map[string]string
 	CurrentMapIdx       int
 	ColumnBeingMapped   string
+	MappingDestColumnList list.Model
 
 	// ---- DUMP OPTION ----
 	WantDump    *bool

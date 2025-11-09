@@ -2,8 +2,10 @@
 package DB
 
 import (
-    "database/sql"
-    "errors"
+	"database/sql"
+	"errors"
+	"fmt"
+	"strings"
 )
 
 // RowsToStrings reads the first column from rows into a []string
@@ -50,4 +52,21 @@ func CloseIfSet(db DBInterface) error {
         return nil
     }
     return db.Close()
+}
+
+func Placeholder(vendor string, n int) string{
+    switch strings.ToLower(vendor) {
+    case "postgres":
+        return fmt.Sprintf("$%d", n)
+    case "mysql":
+        return "?"
+    case "oracle":
+        return fmt.Sprintf(":%d", n)
+    case "sqlite":
+        return "?"
+    case "mssql":
+        return fmt.Sprintf("@p%d", n)
+    default:
+        return "?"
+    }
 }

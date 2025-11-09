@@ -33,6 +33,14 @@ func UpdateDumpOption(m Model, msg tea.Msg) (Model, tea.Cmd) {
 				} else {
 					m.DumpPath = m.DumpPathInp.Value()
 				}
+
+
+				if err := createDumpFile(m.DumpPath, m); err != nil {
+					m.ErrMsg = fmt.Sprintf("❌ Failed to create dump: %v", err)
+				} else {
+					m.ErrMsg = fmt.Sprintf("✅ Dump successfully saved to: %s", m.DumpPath)
+				}
+
 			}
 
 			// Step 3: Move to next step
@@ -53,20 +61,26 @@ func UpdateDumpOption(m Model, msg tea.Msg) (Model, tea.Cmd) {
 }
 
 func ViewDumpOption(m Model) string {
-	title := lipgloss.NewStyle().Bold(true).Underline(true).Render("Dump Option")
+	title := lipgloss.NewStyle().Bold(true).Underline(true).Render("💾 Dump Option")
 
 	if m.WantDump == nil {
 		return fmt.Sprintf(
-			"%s\n\nDo you want to dump the data to a file? (press ENTER for yes, 'n' for no)",
+			"%s\n\nDo you want to dump the data to a file?\n(Press ENTER for Yes, or 'n' for No)",
 			title,
 		)
 	}
 
 	if *m.WantDump {
+		info := ""
+		if m.ErrMsg != "" {
+			info = "\n\n" + m.ErrMsg
+		}
+
 		return fmt.Sprintf(
-			"%s\n\nEnter dump path (default: ./dump.sql):\n\n%s\n\nPress ENTER to confirm.",
+			"%s\n\nEnter dump file path (default: ./dump.sql):\n\n%s\n\nPress ENTER to confirm.%s",
 			title,
 			m.DumpPathInp.View(),
+			info,
 		)
 	}
 

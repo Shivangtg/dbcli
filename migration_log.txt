@@ -1,0 +1,48 @@
+[2025-11-09 15:32:35] [DB: MYSQL] [Exec: 0ms]
+Query: SELECT COUNT(*) FROM departments WHERE id = ?
+Args: [1]
+
+[2025-11-09 15:32:35] [DB: MYSQL] [Exec: 0ms]
+Query: UPDATE departments SET department_name = ? WHERE id = ?
+Args: [Computer Science, 1]
+
+[2025-11-09 15:32:35] [DB: MYSQL] [Exec: 0ms]
+Query: SELECT COUNT(*) FROM departments WHERE id = ?
+Args: [2]
+
+[2025-11-09 15:32:35] [DB: MYSQL] [Exec: 0ms]
+Query: UPDATE departments SET department_name = ? WHERE id = ?
+Args: [Electrical Engineering, 2]
+
+[2025-11-09 15:32:35] [DB: MYSQL] [Exec: 0ms]
+Query: SELECT COUNT(*) FROM departments WHERE id = ?
+Args: [3]
+
+[2025-11-09 15:32:35] [DB: MYSQL] [Exec: 0ms]
+Query: UPDATE departments SET department_name = ? WHERE id = ?
+Args: [Mechanical Engineering, 3]
+
+[2025-11-09 15:32:35] [DB: MYSQL] [Exec: 0ms]
+Query: SELECT COUNT(*) FROM departments WHERE id = ?
+Args: [6]
+
+[2025-11-09 15:32:35] [DB: MYSQL] [Exec: 0ms]
+Query: INSERT INTO departments (id, department_name) VALUES (?, ?)
+Args: [6, Chemistry]
+
+[2025-11-09 15:32:35] [DB: MYSQL] [Exec: 0ms]
+Query: SELECT COUNT(*) FROM departments WHERE id = ?
+Args: [4]
+
+[2025-11-09 15:32:35] [DB: MYSQL] [Exec: 0ms]
+Query: UPDATE departments SET department_name = ? WHERE id = ?
+Args: [Mathematics, 4]
+
+[2025-11-09 15:32:36] [DB: MYSQL] [Exec: 0ms]
+Query: SELECT COUNT(*) FROM departments WHERE id = ?
+Args: [5]
+
+[2025-11-09 15:32:36] [DB: MYSQL] [Exec: 0ms]
+Query: UPDATE departments SET department_name = ? WHERE id = ?
+Args: [Physics, 5]
+

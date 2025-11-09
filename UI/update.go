@@ -22,6 +22,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case StepDumpOption:
 		m, cmd = UpdateDumpOption(m, msg)
 		cmds = append(cmds, cmd)
+
+	case StepMigrationConfirm:
+		m, cmd = UpdateMigrationCompletion(m, msg)
+		cmds = append(cmds, cmd)
 	}
 
 	// Global key handling
