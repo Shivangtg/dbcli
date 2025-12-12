@@ -3,15 +3,14 @@ package UI
 import (
 	"fmt"
 	"os"
+	"reflect"
 	"strings"
 	"time"
 
 	"github.com/pclubiitk/dbcli/DB"
 )
 
-
-// logQuery appends executed SQL queries and args to a migration log file.
-// It includes timestamps, DB vendor, and query duration.
+// --- Utility: log executed queries ---
 func logQuery(vendor string, query string, args []interface{}, start time.Time) {
 	f, err := os.OpenFile("migration_log.txt", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
@@ -39,8 +38,20 @@ func logQuery(vendor string, query string, args []interface{}, start time.Time) 
 	f.WriteString(entry)
 }
 
+// --- Utility: compare two rows ---
+func rowDiffers(srcVals, destVals []interface{}) bool {
+	if len(srcVals) != len(destVals) {
+		return true
+	}
+	for i := range srcVals {
+		if !reflect.DeepEqual(srcVals[i], destVals[i]) {
+			return true
+		}
+	}
+	return false
+}
 
-// MigrateData performs the actual migration and reports progress.
+// --- Main migration function ---
 func MigrateData(m Model, progressChan chan<- int, doneChan chan<- error) {
 	defer func() {
 		close(progressChan)
@@ -61,7 +72,7 @@ func MigrateData(m Model, progressChan chan<- int, doneChan chan<- error) {
 		return
 	}
 
-	// --- Ensure 'id' exists ---
+	// Ensure 'id' exists
 	hasID := false
 	for _, c := range m.SourceColumns {
 		if strings.EqualFold(c, "id") {
@@ -74,6 +85,7 @@ func MigrateData(m Model, progressChan chan<- int, doneChan chan<- error) {
 		return
 	}
 
+	// Add id if not selected
 	userSelectedID := false
 	for _, c := range srcCols {
 		if strings.EqualFold(c, "id") {
@@ -85,6 +97,7 @@ func MigrateData(m Model, progressChan chan<- int, doneChan chan<- error) {
 		srcCols = append(srcCols, "id")
 	}
 
+	// Query source data
 	selectQuery := fmt.Sprintf("SELECT %s FROM %s", strings.Join(srcCols, ", "), srcTable)
 	rows, err := m.Source.RawQuery(selectQuery)
 	if err != nil {
@@ -93,7 +106,7 @@ func MigrateData(m Model, progressChan chan<- int, doneChan chan<- error) {
 	}
 	defer rows.Close()
 
-	// Count total rows
+	// --- Count total rows ---
 	totalRows := 0
 	for rows.Next() {
 		totalRows++
@@ -105,7 +118,7 @@ func MigrateData(m Model, progressChan chan<- int, doneChan chan<- error) {
 		return
 	}
 
-	// Re-fetch actual data
+	// --- Re-fetch actual data for migration ---
 	rows, err = m.Source.RawQuery(selectQuery)
 	if err != nil {
 		doneChan <- fmt.Errorf("failed to refetch data: %v", err)
@@ -113,6 +126,16 @@ func MigrateData(m Model, progressChan chan<- int, doneChan chan<- error) {
 	}
 	defer rows.Close()
 
+	destVendor := m.DestCred["dbVendor"]
+
+	// Normalize table case
+	if destVendor == "oracle" {
+		destTable = strings.ToUpper(destTable)
+	} else if destVendor == "mysql" {
+		destTable = strings.ToLower(destTable)
+	}
+
+	// Map source→destination column names
 	finalDestCols := make([]string, len(srcCols))
 	for i, srcCol := range srcCols {
 		if mapped, ok := mapping[srcCol]; ok {
@@ -126,15 +149,6 @@ func MigrateData(m Model, progressChan chan<- int, doneChan chan<- error) {
 	ptrs := make([]interface{}, len(srcCols))
 	for i := range ptrs {
 		ptrs[i] = &values[i]
-	}
-
-	destVendor := m.DestCred["dbVendor"]
-
-	// Normalize case for table names
-	if destVendor == "oracle" {
-		destTable = strings.ToUpper(destTable)
-	} else if destVendor == "mysql" {
-		destTable = strings.ToLower(destTable)
 	}
 
 	progress := 0
@@ -157,30 +171,51 @@ func MigrateData(m Model, progressChan chan<- int, doneChan chan<- error) {
 			return
 		}
 
-		// --- Check if row exists ---
+		// 1️⃣ Check if row exists
 		checkQuery := fmt.Sprintf("SELECT COUNT(*) FROM %s WHERE id = %s",
 			destTable, DB.Placeholder(destVendor, 1))
-
 		start := time.Now()
 		logQuery(destVendor, checkQuery, []interface{}{idVal}, start)
+
 		checkRows, err := m.Dest.RawQuery(checkQuery, idVal)
 		if err != nil {
 			doneChan <- fmt.Errorf("failed checking id existence: %v", err)
 			return
 		}
-
 		var count int
 		if checkRows.Next() {
-			if err := checkRows.Scan(&count); err != nil {
-				checkRows.Close()
-				doneChan <- fmt.Errorf("failed scanning id existence: %v", err)
-				return
-			}
+			checkRows.Scan(&count)
 		}
 		checkRows.Close()
 
+		// 2️⃣ If exists → compare row
 		if count > 0 {
-			// --- Update existing row ---
+			destQuery := fmt.Sprintf("SELECT %s FROM %s WHERE id = %s",
+				strings.Join(finalDestCols, ", "), destTable, DB.Placeholder(destVendor, 1))
+			destRows, err := m.Dest.RawQuery(destQuery, idVal)
+			if err != nil {
+				doneChan <- fmt.Errorf("failed reading destination row: %v", err)
+				return
+			}
+
+			destVals := make([]interface{}, len(finalDestCols))
+			destPtrs := make([]interface{}, len(finalDestCols))
+			for i := range destPtrs {
+				destPtrs[i] = &destVals[i]
+			}
+
+			if destRows.Next() {
+				destRows.Scan(destPtrs...)
+			}
+			destRows.Close()
+
+			// Compare — skip update if identical
+			if !rowDiffers(values, destVals) {
+				progress++
+				continue
+			}
+
+			// 3️⃣ Update only changed
 			setParts := []string{}
 			args := []interface{}{}
 			argIndex := 1
@@ -195,20 +230,20 @@ func MigrateData(m Model, progressChan chan<- int, doneChan chan<- error) {
 			args = append(args, idVal)
 
 			updateQuery := fmt.Sprintf("UPDATE %s SET %s WHERE id = %s",
-				destTable,
-				strings.Join(setParts, ", "),
-				DB.Placeholder(destVendor, argIndex),
-			)
+				destTable, strings.Join(setParts, ", "), DB.Placeholder(destVendor, argIndex))
 
-			start := time.Now()
+			start = time.Now()
 			logQuery(destVendor, updateQuery, args, start)
-
 			if err := m.Dest.ExecQuery(updateQuery, args...); err != nil {
 				doneChan <- fmt.Errorf("update failed for id=%v: %v", idVal, err)
 				return
 			}
+			if destVendor == "oracle" {
+				_ = m.Dest.ExecQuery("COMMIT")
+			}
+
 		} else {
-			// --- Insert new row ---
+			// 4️⃣ Insert new row
 			insertCols := []string{}
 			placeholders := []string{}
 			args := []interface{}{}
@@ -222,29 +257,27 @@ func MigrateData(m Model, progressChan chan<- int, doneChan chan<- error) {
 			}
 
 			insertQuery := fmt.Sprintf("INSERT INTO %s (%s) VALUES (%s)",
-				destTable,
-				strings.Join(insertCols, ", "),
-				strings.Join(placeholders, ", "),
-			)
+				destTable, strings.Join(insertCols, ", "), strings.Join(placeholders, ", "))
 
-			start := time.Now()
+			start = time.Now()
 			logQuery(destVendor, insertQuery, args, start)
-
 			if err := m.Dest.ExecQuery(insertQuery, args...); err != nil {
 				doneChan <- fmt.Errorf("insert failed for id=%v: %v", idVal, err)
 				return
 			}
+			if destVendor == "oracle" {
+				_ = m.Dest.ExecQuery("COMMIT")
+			}
 		}
 
+		// 5️⃣ Update progress
 		progress++
 		percent := progress * 100 / totalRows
-
 		select {
 		case progressChan <- percent:
 		default:
 		}
-
-		time.Sleep(30 * time.Millisecond)
+		time.Sleep(20 * time.Millisecond)
 	}
 
 	doneChan <- nil
